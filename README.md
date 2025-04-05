@@ -48,7 +48,3 @@ A tool for importing macOS security compliance manifests into Fleet, generating 
 4. View the generated files in the "Output" tab
 5. Configure Fleet API settings in the "Fleet API" tab
 6. Upload policies and configuration profiles to Fleet
-
-## License
-
-[MIT License](LICENSE) 
