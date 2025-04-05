@@ -1,0 +1,83 @@
+{
+    "benchmark": "My custom stig",
+    "parent": "stig",
+    "os": "sequoia",
+    "plist_location": "/Library/Preferences/org.customstig.audit.plist",
+    "log_location": "/Library/Logs/customstig.log",
+    "creation_date": "2025-04-03T19:10:05Z",
+    "rules": [
+        { 
+            "id": "os_airdrop_disable",
+            "title": "Disable AirDrop",
+            "description": "AirDrop *MUST* be disabled to prevent file transfers to or from unauthorized devices. AirDrop allows users to share and receive files from other nearby Apple devices.",
+            "references": "CCE: CCE-94156-7, 800-53r5: AC-3,AC-20,CM-7,CM-7(1), cci: CCI-000381, srg: SRG-OS-000095-GPOS-00049",
+            "tags": "800-53r5_low, 800-53r5_moderate, 800-171, stig",
+            "severity": null,
+            "check": "SELECT 1 WHERE \n  EXISTS (\n    SELECT 1 FROM managed_policies WHERE \n        domain='com.apple.applicationaccess' AND \n        name='allowAirDrop' AND \n        (value = 0 OR value = 'false') AND \n        username = ''\n    )\n  AND NOT EXISTS (\n    SELECT 1 FROM managed_policies WHERE \n        domain='com.apple.applicationaccess' AND \n        name='allowAirDrop' AND \n        (value != 0 AND value != 'false')\n    );",
+            "result": "false",
+            "fix": { 
+                "mobileconfig_info": { 
+                    "domain": "com.apple.applicationaccess",
+                    "key": "allowAirDrop",
+                    "value": "false"
+                }
+            }
+        },
+        { 
+            "id": "os_anti_virus_installed",
+            "title": "Must Use an Approved Antivirus Program",
+            "description": "An approved antivirus product *MUST* be installed and configured to run. Malicious software can establish a base on individual desktops and servers. Employing an automated mechanism to detect this type of software will aid in elimination of the software from the operating system.",
+            "references": "CCE: CCE-94301-9, 800-53r5: AC-3,AC-21,CM-7,CM-9, cci: CCI-000382, srg: SRG-OS-000095-GPOS-00053",
+            "tags": "800-53r5_low, 800-53r5_moderate, 800-171, stig, arm64",
+            "severity": "medium",
+            "check": "SELECT 1\nWHERE (\n    SELECT COUNT(*)\n    FROM launchd\n    WHERE path IN (\n        '/Library/Apple/System/Library/LaunchDaemons/com.apple.XprotectFramework.PluginService.plist',\n        '/Library/Apple/System/Library/LaunchDaemons/com.apple.XProtect.daemon.scan.plist'\n    )\n) = 2;",
+            "result": "pass",
+            "fix": {
+                "shell_script": "#!/bin/bash\n\n/bin/launchctl load -w /Library/Apple/System/Library/LaunchDaemons/com.apple.XProtect.daemon.scan.plist\n/bin/launchctl load -w /Library/Apple/System/Library/LaunchDaemons/com.apple.XprotectFramework.PluginService.plist"
+            }
+        },
+        { 
+            "id": "os_gatekeeper_enable",
+            "title": "Enable Gatekeeper",
+            "description": "Gatekeeper *MUST* be enabled. Gatekeeper is a security feature that ensures that applications are digitally signed by an Apple-issued certificate before they are permitted to run. Digital signatures allow the macOS host to verify that the application has not been modified by a malicious third party. Administrator users will still have the option to override these settings on a case-by-case basis.",
+            "references": "CCE: CCE-94156-7, 800-53r5: AC-3,AC-20,CM-7,CM-7(1), cci: CCI-000381, srg: SRG-OS-000095-GPOS-00049",
+            "tags": "800-53r5_low, 800-53r5_moderate, 800-171, stig",
+            "severity": null,
+            "check": "SELECT 1 FROM gatekeeper WHERE assessments_enabled = 1 AND dev_id_enabled = 1;",
+            "result": "false",
+            "fix": { 
+                "mobileconfig_info": { 
+                    "domain": "com.apple.systempolicy.control",
+                    "key": "EnableAssessment",
+                    "value": "true"
+                }
+            }
+        },
+        { 
+            "id": "os_time_server_enabled",
+            "title": "Enable Time Synchronization Daemon",
+            "description": "The macOS time synchronization daemon (timed) *MUST* be enabled for proper time synchronization to an authorized time server. NOTE: The time synchronization daemon is enabled by default on macOS.",
+            "references": "CCE: CCE-94156-7, 800-53r5: AC-3,AC-20,CM-7,CM-7(1), cci: CCI-000381, srg: SRG-OS-000095-GPOS-00049",
+            "tags": "800-53r5_low, 800-53r5_moderate, 800-171, stig",
+            "severity": null,
+            "check": "SELECT 1 WHERE \n  EXISTS (\n    SELECT 1 FROM managed_policies WHERE \n        domain='com.apple.applicationaccess' AND \n        name='forceAutomaticDateAndTime' AND \n        (value = 1 OR value = 'true') AND \n        username = ''\n    )\n  AND NOT EXISTS (\n    SELECT 1 FROM managed_policies WHERE \n        domain='com.apple.applicationaccess' AND \n        name='forceAutomaticDateAndTime' AND \n        (value != 1 AND value != 'true')\n    );",
+            "result": "false",
+            "fix": {
+                "shell_script": "#!/bin/bash\n\n/bin/launchctl load -w /System/Library/LaunchDaemons/com.apple.timed.plist"
+            }
+        },
+        { 
+            "id": "system_settings_hot_corners_disable",
+            "title": "Disable Hot Corners",
+            "description": "Hot corners *MUST* be disabled. The information system conceals, via the session lock, information previously visible on the display with a publicly viewable image. Although hot comers can be used to initiate a session lock or to launch useful applications, they can also be configured to disable an automatic session lock from initiating. Such a configuration introduces the risk that a user might forget to manually lock the screen before stepping away from the computer.",
+            "references": "CCE: CCE-94156-7, 800-53r5: AC-3,AC-20,CM-7,CM-7(1), cci: CCI-000381, srg: SRG-OS-000095-GPOS-00049",
+            "tags": "800-53r5_low, 800-53r5_moderate, 800-171, stig",
+            "severity": null,
+            "check": "SELECT 1 WHERE NOT EXISTS(\n  SELECT 1 FROM plist\n  WHERE path LIKE '/Users/%/Library/Preferences/com.apple.dock.plist' AND (\n    key = 'wvous-br-corner' OR\n    key = 'wvous-bl-corner' OR\n    key = 'wvous-tr-corner' OR\n    key = 'wvous-tl-corner'\n) AND value = 6);",
+            "result": "false",
+            "fix": {
+                "shell_script": "#!/bin/bash\n\n# Disable hot corners\nfor user in /Users/*; do\n    if [ -d \"$user\" ]; then\n        defaults write \"$user/Library/Preferences/com.apple.dock.plist\" wvous-bl-corner -int 0\n        defaults write \"$user/Library/Preferences/com.apple.dock.plist\" wvous-br-corner -int 0\n        defaults write \"$user/Library/Preferences/com.apple.dock.plist\" wvous-tr-corner -int 0\n        defaults write \"$user/Library/Preferences/com.apple.dock.plist\" wvous-tl-corner -int 0\n    fi\ndone\n\n# Restart the Dock to apply changes\nkillall Dock"
+            }
+        }
+    ]
+}
